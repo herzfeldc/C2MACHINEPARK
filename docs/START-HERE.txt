@@ -1,0 +1,20 @@
+C2 MACHINE PARK - START HERE
+============================
+
+1. Make sure this whole "C2-Machine-Park" folder was extracted from the ZIP.
+   Do not start the program from inside the ZIP file.
+2. Keep the folder in a place you can write to (e.g. your user folder or Desktop),
+   not in C:\Program Files.
+3. Double-click "C2 Machine Park.exe".
+4. Enter your C2 authentication token and the API address, then click Connect.
+
+No installation, administrator rights or additional software is needed.
+Everything the program needs is inside this folder. Local data (cache, logs)
+is stored in the "data" subfolder. Delete that folder to reset the app.
+
+Windows SmartScreen may warn about an unrecognized app (it is not code-signed).
+Choose "More info" -> "Run anyway" only for downloads from the official repository.
+
+Full documentation: docs\C2-Machine-Park-Documentation.html
+
+To uninstall: close the app and delete this folder.
