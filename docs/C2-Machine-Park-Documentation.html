@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>C2 Machine Park - Documentation</title><style>body{font-family:Segoe UI,Arial,sans-serif;max-width:1000px;margin:32px auto;padding:0 24px;line-height:1.55;color:#1d1d1f}h1{border-bottom:3px solid #ff8a00;padding-bottom:8px}h2{margin-top:40px;border-bottom:1px solid #ddd;padding-bottom:4px}table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;vertical-align:top}th{background:#f3f3f3}code{background:#f3f3f3;padding:1px 4px;border-radius:3px}pre{background:#f6f8fa;padding:12px;overflow:auto}pre code{background:none}a{color:#0b63c5}</style></head><body>
+<h1 id="c2-machine-park--complete-documentation">C2 Machine Park – Complete Documentation</h1>
+<p>Version 1.1.0 · Windows x64 desktop application · Last updated 2026-11-19</p>
+<p>C2 Machine Park is a desktop tool for monitoring and maintaining the C2 (ctwo) virtual machine
+park. It shows every C2 machine and every resource group. Busy, free, offline and parked states are
+visible at a glance, along with live session timing. Users can move, remove, park and comment on
+machines with drag and drop.</p>
+<hr>
+<h2 id="contents">Contents</h2>
+<ol>
+<li><a href="#1-quick-start-end-users">Quick start (end users)</a></li>
+<li><a href="#2-deployment-package">Deployment package</a></li>
+<li><a href="#3-signing-in">Signing in</a></li>
+<li><a href="#4-screen-layout">Screen layout</a></li>
+<li><a href="#5-machine-status-and-colors">Machine status and colors</a></li>
+<li><a href="#6-session-timing-pending-runtime-and-av-pending">Session timing: pending, runtime and AV PENDING</a></li>
+<li><a href="#7-hover-information">Hover information</a></li>
+<li><a href="#8-filtering-searching-and-sorting">Filtering, searching and sorting</a></li>
+<li><a href="#9-parallel-process-frames">Parallel-process frames</a></li>
+<li><a href="#10-display-options">Display options</a></li>
+<li><a href="#11-save-and-load-settings">Save and load settings</a></li>
+<li><a href="#12-auto-refresh">Auto refresh</a></li>
+<li><a href="#13-selecting-machines">Selecting machines</a></li>
+<li><a href="#14-machine-actions-add-remove-park">Machine actions (add, remove, park)</a></li>
+<li><a href="#15-comments-and-resource-json">Comments and Resource JSON</a></li>
+<li><a href="#16-resource-groups">Resource groups</a></li>
+<li><a href="#17-c2-api-calls-used">C2 API calls used</a></li>
+<li><a href="#18-security-and-data-storage">Security and data storage</a></li>
+<li><a href="#19-troubleshooting">Troubleshooting</a></li>
+<li><a href="#20-developer-guide">Developer guide</a></li>
+<li><a href="#21-change-history">Change history</a></li>
+<li><a href="#22-image-credits">Image credits</a></li>
+</ol>
+<hr>
+<h2 id="1-quick-start-end-users">1. Quick start (end users)</h2>
+<ol>
+<li>Download <code>C2-Machine-Park-&lt;version&gt;-win-x64.zip</code> from the repository&#39;s <strong>Releases</strong> page.</li>
+<li>Right-click the ZIP → <strong>Properties</strong> → tick <strong>Unblock</strong> (if shown) → <strong>OK</strong>.</li>
+<li>Right-click → <strong>Extract All…</strong> and choose a folder you can write to, for example
+<code>C:\Users\&lt;you&gt;\C2-Machine-Park</code> or a USB drive. Do <strong>not</strong> extract into <code>C:\Program Files</code>.</li>
+<li>Open the extracted <code>C2-Machine-Park</code> folder and double-click <strong><code>C2 Machine Park.exe</code></strong>.</li>
+<li>Enter your C2 authentication token and the API address, then click <strong>Connect</strong>.</li>
+</ol>
+<p>No installation, administrator rights, Node.js, browser or runtime is required. Everything the app
+needs is in the <code>C2-Machine-Park</code> folder.</p>
+<p>Windows SmartScreen may warn that the app is unrecognized because it is not code-signed. Choose
+<strong>More info → Run anyway</strong> only if the ZIP came from the official repository.</p>
+<p>To update, close the app, extract the new ZIP and copy your old <code>data</code> folder into the new
+folder if you want to keep browser-side state. To uninstall, delete the folder.</p>
+<hr>
+<h2 id="2-deployment-package">2. Deployment package</h2>
+<p>The ZIP contains exactly one top-level folder:</p>
+<pre><code class="language-text">C2-Machine-Park\
+├── C2 Machine Park.exe      ← start the application here
+├── START-HERE.txt           ← short instructions
+├── docs\
+│   ├── C2-Machine-Park-Documentation.html   ← this document (open in any browser)
+│   └── C2-Machine-Park-Documentation.md
+├── resources\app.asar       ← the application (interface and logic)
+├── locales\, *.dll, *.pak, *.bin, *.dat   ← bundled Electron/Chromium runtime
+└── data\                    ← created on first start (cache, browser storage, logs)
+</code></pre>
+<ul>
+<li><strong>Self-contained:</strong> the Electron runtime (Chromium and Node.js) is bundled. Nothing is written
+to <code>%APPDATA%</code> or the registry. All runtime data goes to the <code>data</code> subfolder next to the EXE.</li>
+<li><strong>Portable:</strong> the folder can be moved or copied. It can run from any writable location,
+including a network share or USB drive. Run it from a location where the user has write access.</li>
+<li><strong>Requirements:</strong> Windows 10/11 x64, and network access to the C2 API server. The API must
+allow requests from the desktop app (CORS for the <code>file://</code> origin).</li>
+<li><strong>Integrity:</strong> each release includes a <code>.sha256</code> file. To verify a download, run
+<code>Get-FileHash .\C2-Machine-Park-&lt;version&gt;-win-x64.zip -Algorithm SHA256</code> in PowerShell and compare
+the result with that file.</li>
+</ul>
+<hr>
+<h2 id="3-signing-in">3. Signing in</h2>
+<p>On start, the app shows <strong>Machine Park Maintenance</strong> with two fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Authentication Token</td>
+<td>Your personal C2 API bearer token. Required. Masked while typing.</td>
+</tr>
+<tr>
+<td>ctwo API Address</td>
+<td>Base URL of the C2 public API, pre-filled with the production address.</td>
+</tr>
+</tbody></table>
+<p>The desktop app does <strong>not</strong> ship with any token. The token is kept in memory only and is
+not saved to disk or to settings files. You enter it again each time the app starts.</p>
+<hr>
+<h2 id="4-screen-layout">4. Screen layout</h2>
+<p><strong>Header (top)</strong></p>
+<ul>
+<li>Title <em>C2 Machine Park</em> and subtitle.</li>
+<li><strong>Save settings / Load settings</strong> (see <a href="#11-save-and-load-settings">section 11</a>).</li>
+<li><strong>Auto Refresh</strong> switch and <strong>Frequency</strong> (1–300 seconds).</li>
+<li>Drop zones: <strong>Remove VM</strong> (recycling bins), <strong>Park VM</strong> (parking lot).</li>
+</ul>
+<p><strong>All C2 Machines (upper section)</strong></p>
+<ul>
+<li>Header row: section title, name filter, <strong>Sort machines by</strong>, shown/total count and
+<strong>Display options</strong>.</li>
+<li>Counters: total machines, busy, free, offline, parked, <strong>PENDING</strong> and <strong>AV PENDING</strong>.</li>
+<li><strong>VM with comments only</strong> switch and <strong>Unselect All</strong>.</li>
+<li>The machine grid shows every visible, non-deleted C2 machine. The section grows to fit all
+machines, and the page scrolls.</li>
+</ul>
+<p><strong>Resource groups (lower section)</strong></p>
+<ul>
+<li>One collapsible card per resource group, with the group&#39;s counters, <strong>Refresh</strong> and <strong>Save VMs</strong>.</li>
+<li><strong>Sort by</strong> for groups (name or machine count, ascending/descending) and a shared
+<strong>Sort machines by</strong> for machines inside groups.</li>
+</ul>
+<p>Every machine tile is the same size (134.4 × 61.6 CSS px) and scales with zoom (Ctrl + mouse
+wheel). Long names are shortened with &quot;…&quot;, and the full name is in the hover popup. Names ending
+in <code> *</code> have a comment.</p>
+<hr>
+<h2 id="5-machine-status-and-colors">5. Machine status and colors</h2>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Rule (from the C2 API)</th>
+<th>Counter color</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Busy</strong></td>
+<td><code>isOnline = true</code>, <code>isOutaged = false</code> and at least one <em>Undecided</em> session</td>
+<td>Blue</td>
+</tr>
+<tr>
+<td><strong>Free</strong></td>
+<td>Online, not outaged, no Undecided session</td>
+<td>Green</td>
+</tr>
+<tr>
+<td><strong>Offline</strong></td>
+<td><code>isOnline = false</code></td>
+<td>Red/grey</td>
+</tr>
+<tr>
+<td><strong>Parked</strong></td>
+<td><code>isOutaged = true</code> (planned downtime)</td>
+<td>Parked color</td>
+</tr>
+</tbody></table>
+<ul>
+<li>Total = free + busy + offline + parked. Machines whose status has not loaded yet are
+excluded until it is known.</li>
+<li>Busy machines are <strong>not</strong> counted as free.</li>
+<li>Busy detection uses <code>sessions?outcomes=Undecided&amp;resourceIds=&lt;id&gt;</code> per online, non-outaged
+machine at each refresh. Failed checks are reported and never mark a machine busy.</li>
+<li>Statuses and sessions load before the lists appear, so colors and sorting are correct
+from the first screen.</li>
+</ul>
+<hr>
+<h2 id="6-session-timing-pending-runtime-and-av-pending">6. Session timing: pending, runtime and AV PENDING</h2>
+<p>All timing uses the <strong>first Undecided session</strong> of a busy machine, in API order. Later sessions
+are never substituted.</p>
+<h3 id="time-zone-handling">Time zone handling</h3>
+<p>The C2 API returns timestamps without a time-zone marker (for example <code>2026-11-18T14:56:21.374</code>).
+These are <strong>UTC</strong>, and the app reads them as UTC. Timestamps with <code>Z</code> or an explicit offset keep
+their stated zone. The current time is taken as an absolute instant, so the PC&#39;s local time zone
+and daylight saving time never affect results.</p>
+<h3 id="pending-badge-upper-left-corner">Pending badge (upper-left corner)</h3>
+<ul>
+<li>Value: <code>started − created</code> in seconds, rounded to the nearest second.</li>
+<li>Shown only when the value is <strong>≥ 2 s</strong>. 0 s and 1 s are hidden.</li>
+<li><code>--</code> means the session is missing, not started, or has invalid timestamps. The reason is
+shown on hover.</li>
+</ul>
+<h3 id="runtime-badge-upper-right-corner">Runtime badge (upper-right corner)</h3>
+<ul>
+<li>Value: <code>now − started</code>, <strong>rounded down to whole minutes</strong> (for example <code>4m</code>). Under a minute
+shows <code>0m</code>.</li>
+<li>Updates at each full-minute boundary without any API call.</li>
+<li><code>--</code> with a clock warning means the start time is in the future (clock difference) or invalid.</li>
+<li>With a <strong>runtime threshold</strong> set, only runtimes ≥ threshold are shown.</li>
+<li>In <strong>dot mode</strong>, a large red dot replaces the number once the threshold is reached.</li>
+</ul>
+<h3 id="pending-counter-red-number">PENDING counter (red number)</h3>
+<p>The number of sessions returned by <code>sessions?take=500&amp;outcomes=Undecided</code> with <code>started = null</code>.
+Sessions of workflow <strong>670</strong> are excluded. This counts sessions, not machines, and filters do not
+affect it. It shows N/A if the check failed.</p>
+<h3 id="av-pending-counter-blue">AV PENDING counter (blue)</h3>
+<p>The average start delay (<code>started − created</code>) over all unique busy machines. Zero delays are
+included, while missing or invalid timings are excluded. The value is rounded to whole seconds,
+and N/A means no valid timings.</p>
+<hr>
+<h2 id="7-hover-information">7. Hover information</h2>
+<p>Hovering over a machine in either list shows:</p>
+<ul>
+<li>Name, ID, online/outaged status and resource groups.</li>
+<li>For busy machines, when <strong>Show workflow/task names and session timestamps</strong> is on:<ul>
+<li>the workflow name (with a leading <code>C2:</code> removed),</li>
+<li>the workflow task name (from <code>workflowTaskId</code>),</li>
+<li><code>Created (UTC)</code> and <code>Started (UTC)</code> of the first session, or <em>Unavailable</em>.</li>
+</ul>
+</li>
+<li>Maintained custom fields (<code>linkedCustomFields</code>) as <code>name: value</code>, with empty or NULL values
+omitted.</li>
+</ul>
+<p>Possible messages are <em>No linked workflow</em>, <em>No linked task</em>, <em>Workflow unavailable</em> and
+<em>Task unavailable</em>. The last two include error details. Each distinct workflow or task is
+fetched once per refresh.</p>
+<hr>
+<h2 id="8-filtering-searching-and-sorting">8. Filtering, searching and sorting</h2>
+<ul>
+<li><strong>Name filter</strong> (All C2 Machines): case-insensitive partial match. It shows the number
+of matches and does not affect counters, groups or selections.</li>
+<li><strong>Status counters</strong> are clickable filters. Click one to filter, or <strong>Ctrl+Click</strong> to combine
+several statuses.</li>
+<li><strong>VM with comments only</strong>: shows only machines with a non-blank <code>Comment</code>.</li>
+<li><strong>Sort machines by</strong> (All C2 Machines, and separately for groups):<ul>
+<li><strong>Status</strong> (default): busy → free → parked → offline → unknown. Busy machines are sorted
+by first-session <strong>Process ID</strong> (numeric IDs as numbers), then by name. Missing Process IDs
+come last among busy machines.</li>
+<li><strong>Name</strong>: alphabetical.</li>
+</ul>
+</li>
+<li><strong>Group Sort by</strong>: name or machine count, with an Ascending/Descending toggle. Equal counts
+are ordered by name.</li>
+</ul>
+<hr>
+<h2 id="9-parallel-process-frames">9. Parallel-process frames</h2>
+<p>In <strong>Status</strong> sorting, busy machines whose first session shares a <strong>Process ID</strong> are kept
+together and outlined with a 4 px frame:</p>
+<ul>
+<li><strong>vivid orange</strong> in All C2 Machines,</li>
+<li><strong>black</strong> inside resource groups.</li>
+</ul>
+<p>If a group does not fit in the rest of a row, it starts on the next row. Larger groups wrap,
+and the frame follows the outline across rows. Corner badges and dots are drawn above the frame.
+Frames do not block clicks or drag selection, and they update after filtering, refreshing,
+expanding, resizing and zooming. Single machines and missing Process IDs get no frame.</p>
+<hr>
+<h2 id="10-display-options">10. Display options</h2>
+<p>Click <strong>Display options</strong> in the All C2 Machines header. These settings apply to both lists.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Show workflow/task names and session timestamps</td>
+<td>On</td>
+<td>Workflow/task names plus Created/Started (UTC) in hovers. Off skips these API lookups; turning it on again refreshes statuses.</td>
+</tr>
+<tr>
+<td>Show pending time</td>
+<td>On</td>
+<td>Upper-left start-delay badge.</td>
+</tr>
+<tr>
+<td>Show runtime</td>
+<td>On</td>
+<td>Upper-right runtime badge. Off stops its timers.</td>
+</tr>
+<tr>
+<td>Runtime threshold (minutes)</td>
+<td>0</td>
+<td>Show runtime only from this many whole minutes.</td>
+</tr>
+<tr>
+<td>Runtime dot mode</td>
+<td>Off</td>
+<td>Large red dot instead of the number when the threshold is reached.</td>
+</tr>
+<tr>
+<td>Show parallel-process frames</td>
+<td>On</td>
+<td>Frames around machines sharing a Process ID. Sorting is unaffected.</td>
+</tr>
+</tbody></table>
+<p>Only the workflow/task option causes extra API calls. All other displays reuse loaded data.</p>
+<hr>
+<h2 id="11-save-and-load-settings">11. Save and load settings</h2>
+<p><strong>Save settings</strong> writes a JSON file (default name <code>C2-Machine-Park-settings.json</code>) through a
+Save As dialog. <strong>Load settings</strong> opens a file chooser and restores it.</p>
+<p>Saved settings: display options, runtime threshold and dot mode, name/status/comment filters,
+all sort controls, auto-refresh on/off and frequency, and resource-group expansion state.</p>
+<p><strong>Never saved:</strong> tokens, API address, machine selections or machine data. Files are versioned
+(<code>format: c2-machine-park-settings</code>, <code>version: 1</code>). Invalid, unknown or tampered files are
+rejected with an error and no setting is changed.</p>
+<hr>
+<h2 id="12-auto-refresh">12. Auto refresh</h2>
+<p>Turn on <strong>Auto Refresh</strong> and set <strong>Frequency</strong> (1–300 s). Each cycle refreshes machine statuses,
+session activity, PENDING and, if enabled, workflow/task names. Overlapping refreshes share
+one request cycle. Errors are collected in a refresh error dialog.</p>
+<hr>
+<h2 id="13-selecting-machines">13. Selecting machines</h2>
+<ul>
+<li><strong>Ctrl+Click</strong> a tile to add it to or remove it from the selection.</li>
+<li><strong>Drag a rectangle</strong> starting from empty space to select all visible tiles it touches.
+Collapsed or clipped tiles are excluded. <strong>Esc</strong> cancels the rectangle.</li>
+<li><strong>Unselect All</strong> clears the selection.</li>
+<li>Dragging any selected tile drags the whole selection.</li>
+</ul>
+<hr>
+<h2 id="14-machine-actions-add-remove-park">14. Machine actions (add, remove, park)</h2>
+<p>All write actions ask for confirmation before any API request is sent.</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>How</th>
+<th>API</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Add to group</td>
+<td>Drag machine(s) onto a resource group</td>
+<td><code>POST resourceGroup/{id}/addResource</code></td>
+</tr>
+<tr>
+<td>Remove from group</td>
+<td>Drag machine(s) from a group onto <strong>Remove VM</strong></td>
+<td><code>POST resourceGroup/{id}/removeResource</code> per machine</td>
+</tr>
+<tr>
+<td>Park</td>
+<td>Drag machine(s) onto <strong>Park VM</strong>, enter a reason and confirm</td>
+<td><code>POST plannedDowntimes</code> from <strong>now</strong> to <strong>now + 1 year</strong>; the exact UTC start and end are shown before sending</td>
+</tr>
+<tr>
+<td>Save VMs</td>
+<td><strong>Save VMs</strong> on a group card</td>
+<td>Downloads <code>&lt;group&gt;_machines.txt</code>; no API write</td>
+</tr>
+</tbody></table>
+<p>Bulk operations report each machine&#39;s result.</p>
+<hr>
+<h2 id="15-comments-and-resource-json">15. Comments and Resource JSON</h2>
+<ul>
+<li><strong>Double-click</strong> a machine to open the <strong>Comment</strong> editor. Only the custom field named
+<code>Comment</code> can be edited.
+<strong>Save Comment in C2</strong> (after confirmation) sends
+<code>POST customfields/AddOrUpdateCustomFieldToEntity</code> with <code>entityType: &quot;Resource&quot;</code>. An empty text
+clears the comment. Failures keep your text and are not retried automatically.</li>
+<li><strong>Ctrl+double-click</strong> opens a read-only <strong>Resource JSON</strong> window with a fresh
+<code>GET resource/{id}</code> response. Close it with <strong>Esc</strong> or <strong>Close</strong>.</li>
+</ul>
+<hr>
+<h2 id="16-resource-groups">16. Resource groups</h2>
+<ul>
+<li>Groups marked <code>deleted: true</code> and BOOT-named groups are excluded.</li>
+<li>Group machine lists exclude <code>visible: false</code> or <code>deleted: true</code> resources.</li>
+<li>Click a group name or its arrow (or press Enter/Space) to collapse or expand it.</li>
+<li><strong>Refresh</strong> on a group reloads only that group.</li>
+</ul>
+<hr>
+<h2 id="17-c2-api-calls-used">17. C2 API calls used</h2>
+<p>All calls go to the configured API address with <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Method and path</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Machines</td>
+<td><code>GET resources?skip=0&amp;take=1000</code>, <code>GET resource/{id}</code></td>
+</tr>
+<tr>
+<td>Groups</td>
+<td><code>GET resourcegroups?skip=0&amp;take=300</code>, <code>GET resources?resourceGroupId={id}&amp;skip=0&amp;take=200</code></td>
+</tr>
+<tr>
+<td>Busy detection</td>
+<td><code>GET sessions?outcomes=Undecided&amp;resourceIds={id}</code></td>
+</tr>
+<tr>
+<td>PENDING</td>
+<td><code>GET sessions?take=500&amp;outcomes=Undecided</code></td>
+</tr>
+<tr>
+<td>Workflow name</td>
+<td><code>GET workflows/{workflowId}</code> (optional)</td>
+</tr>
+<tr>
+<td>Task name</td>
+<td><code>GET workflowTasks/{workflowTaskId}</code> (optional)</td>
+</tr>
+<tr>
+<td>Add to group</td>
+<td><code>POST resourceGroup/{id}/addResource</code> (after confirmation)</td>
+</tr>
+<tr>
+<td>Remove from group</td>
+<td><code>POST resourceGroup/{id}/removeResource</code> (after confirmation)</td>
+</tr>
+<tr>
+<td>Park</td>
+<td><code>POST plannedDowntimes</code> (after confirmation)</td>
+</tr>
+<tr>
+<td>Comment</td>
+<td><code>POST customfields/AddOrUpdateCustomFieldToEntity</code> (after confirmation)</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="18-security-and-data-storage">18. Security and data storage</h2>
+<ul>
+<li>No credentials are included in the package. The token is entered at start and kept in
+memory only.</li>
+<li>The packaging script refuses to build a ZIP if a known token is found in the build output.</li>
+<li>Chromium security stays enabled: sandbox, context isolation, no Node.js in the page, web
+security on, and certificate errors are not bypassed. New windows, navigation and permission
+requests are blocked.</li>
+<li>Local data (cache, storage, logs) stays in <code>C2-Machine-Park\data</code>. Delete this folder to reset.</li>
+<li>The EXE is unsigned. Distribute only through the private repository.</li>
+</ul>
+<hr>
+<h2 id="19-troubleshooting">19. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause / fix</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SmartScreen warning</td>
+<td>Unsigned app. Use <strong>More info → Run anyway</strong> for official downloads.</td>
+</tr>
+<tr>
+<td>App does not start, or files are missing</td>
+<td>The ZIP was not fully extracted, or it was started from inside the ZIP. Extract everything first.</td>
+</tr>
+<tr>
+<td>&quot;Access denied&quot; or nothing is saved</td>
+<td>The folder is read-only (for example Program Files). Move it to your user folder.</td>
+</tr>
+<tr>
+<td>Network/CORS error after Connect</td>
+<td>Check VPN/network and the API address. The API must allow the desktop origin.</td>
+</tr>
+<tr>
+<td>401/403 errors</td>
+<td>The token is wrong or expired. Restart and enter a new token.</td>
+</tr>
+<tr>
+<td>Runtime shows <code>--</code> with a clock warning</td>
+<td>The PC clock is ahead of or behind the server. Sync Windows time.</td>
+</tr>
+<tr>
+<td>Workflow names missing</td>
+<td>Display option is off, or the lookups failed (see the refresh error dialog).</td>
+</tr>
+<tr>
+<td>Settings file rejected</td>
+<td>The file was edited or is from an unsupported version. Save a new one.</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="20-developer-guide">20. Developer guide</h2>
+<p><strong>Technology:</strong> React 19 + Vite 8 (UI), Electron 45 (desktop shell), electron-builder 26,
+oxlint, and Node&#39;s built-in test runner.</p>
+<pre><code class="language-text">C2MACHINEPARK\
+├── desktop\main.cjs          Electron main process (secure window, portable data folder)
+├── scripts\package-zip.ps1   Creates the deployment ZIP and runs the token check
+├── docs\                     This documentation and START-HERE.txt
+├── src\App.jsx               Header, sign-in, auto refresh, remove/park dialogs
+├── src\components\           MachineManager, Zone, MachineBox, DisplayOptions, SettingsFiles, …
+├── src\services\api.js       API helpers, UTC timestamp parsing, timing and hover formatting
+├── src\processConnections.js Process-frame geometry
+├── src\viewSettings.js       Settings model and file validation
+└── src\*.test.js             Unit tests
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>npm install</code></td>
+<td>Install development dependencies (developers only)</td>
+</tr>
+<tr>
+<td><code>npm run dev</code></td>
+<td>Web development server with hot reload</td>
+</tr>
+<tr>
+<td><code>npm run desktop</code></td>
+<td>Build the desktop UI and start Electron</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>oxlint</td>
+</tr>
+<tr>
+<td><code>node --test src/*.test.js</code></td>
+<td>Unit tests</td>
+</tr>
+<tr>
+<td><code>npm run build:folder</code></td>
+<td>Build <code>release\win-unpacked</code></td>
+</tr>
+<tr>
+<td><code>npm run package:zip</code></td>
+<td>Build the folder and create <code>release\C2-Machine-Park-&lt;version&gt;-win-x64.zip</code> + <code>.sha256</code></td>
+</tr>
+<tr>
+<td><code>npm run build:exe</code></td>
+<td>Alternative single-file portable EXE</td>
+</tr>
+</tbody></table>
+<p><strong>Release procedure</strong></p>
+<ol>
+<li>Bump <code>version</code> in <code>package.json</code> and update <a href="#21-change-history">Change history</a>.</li>
+<li>Run the tests, then <code>npm run package:zip</code>.</li>
+<li>Start <code>release\package\C2-Machine-Park\C2 Machine Park.exe</code> and check sign-in.</li>
+<li>Create a GitHub release <code>v&lt;version&gt;</code>, then attach the ZIP and its <code>.sha256</code> file.</li>
+</ol>
+<hr>
+<h2 id="21-change-history">21. Change history</h2>
+<p><strong>1.1.0 (2026-11-19)</strong></p>
+<ul>
+<li>Deployment ZIP with a single self-contained folder, portable <code>data</code> folder and documentation.</li>
+<li>Runtime badge (whole minutes), threshold and red-dot mode.</li>
+<li>UTC-correct timestamp handling (fixed runtimes that were one hour too long).</li>
+<li>Display options dialog. Save/Load settings files.</li>
+<li>Parallel-process frames (orange or black, 4 px), replacing the earlier connection bars.</li>
+<li>Created/Started (UTC) in hovers. Compact filter and sort controls.</li>
+<li>Pending-time badges, AV PENDING and PENDING counters, Process ID sorting.</li>
+</ul>
+<p><strong>1.0.0 (2026-11-06)</strong></p>
+<ul>
+<li>First portable Windows build: machine lists, resource groups, busy detection,
+add/remove/park, comments, Resource JSON, filters, sorting and auto refresh.</li>
+</ul>
+<hr>
+<h2 id="22-image-credits">22. Image credits</h2>
+<p>All bundled images are public domain (CC0) from publicdomainpictures.net:
+<em>Empty Parking Lots</em> by Circe Denyer (Park VM), <em>Recycling Bins</em> by Lynn Greyling (Remove VM) and
+<em>Floppy disks</em> by Petr Kratochvil (Save VMs).</p>
+
+</body></html>
